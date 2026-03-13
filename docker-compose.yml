@@ -1,0 +1,56 @@
+services:
+  configsvr:
+    image: mongo:6
+    container_name: configsvr
+    command: mongod --configsvr --replSet configReplSet --port 27019 --bind_ip_all
+    ports:
+      - 27019:27019
+    volumes:
+      - configdb_data:/data/configdb
+
+  shard1:
+    image: mongo:6
+    container_name: shard1
+    command: mongod --shardsvr --replSet shard1 --port 27018 --bind_ip_all
+    ports:
+      - 27018:27018
+    volumes:
+      - shard1db_data:/data/db
+
+  shard2:
+    image: mongo:6
+    container_name: shard2
+    command: mongod --shardsvr --replSet shard2 --port 27020 --bind_ip_all
+    ports:
+      - 27020:27020
+    volumes:
+      - shard2db_data:/data/db
+
+  mongos:
+    image: mongo:6
+    container_name: mongos
+    command: mongos --configdb configReplSet/configsvr:27019 --bind_ip_all --port 27017
+    ports:
+      - 27017:27017
+    depends_on:
+      - configsvr
+    restart: always
+
+  interface:
+    build: ./interface
+    depends_on:
+      - mongos
+    profiles: ["manual"]
+
+  load_test:
+    build: ./load_test
+    depends_on:
+      - mongos
+    profiles: ["manual"]
+    volumes:
+      - ./load_test:/app
+
+volumes:
+  configdb_data:
+  shard1db_data:
+  shard2db_data:
